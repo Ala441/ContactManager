@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../ContactManager.BusinessLogic/ContactManager.BusinessLogic.csproj" Id="657f5e6f-de75-4d02-9de8-90d0b2c88c9e" />
+  <Project Path="../ContactManager.DataAccess/ContactManager.DataAccess.csproj" Id="b893875a-de91-4a51-aed0-7c82e7fb1cf3" />
+  <Project Path="ContactManager.UI.csproj" Id="940d0f00-2df0-4f2e-b48a-b34b2a9ec43e" />
+</Solution>
