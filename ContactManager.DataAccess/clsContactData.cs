@@ -7,7 +7,7 @@ namespace ContactManager.DataAccess
 {
     public class clsContactData
     {
-        public static string Connectionstring = "server=.; database = Contactsdb1; User Id = sa; Password = 123456; Encrypt = True;TrustServerCertificate=True;";
+        private static string Connectionstring = "Server=your server name; Database=contactdb1; User Id=your name; Password=your password; TrustServerCertificate=True;";
 
         public static async Task<DataTable> ExecuteStoredProcedure(string Procedurename, SqlParameter[] parameters = null)
         {
