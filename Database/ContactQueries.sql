@@ -13,7 +13,7 @@ GO
 
 IF DB_NAME()<>'Contactsdb1'
 begin
-     throw 510000,'Conection fals',1
+     throw 510000,'Connection faliled',1
 	 return
 END
 GO
@@ -220,18 +220,18 @@ AS
 BEGIN
 	 INSERT INTO ContactHistory(ContactID,firstname,lastname,email,phone,address,countryid,Operation,ModifaieBy)
 	 SELECT ContactID,firstname,lastname,email,phone,address,countryid,'INSERTED',
-	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaieBy')AS nvarchar(50)),SYSTEM_USER) FROM inserted;
+	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaiedBy')AS nvarchar(50)),SYSTEM_USER) FROM inserted;
 END
 GO
 
 CREATE OR ALTER PROCEDURE sp_InsertBulkContacts
     @ContactList ContactTableType READONLY,
-	@ModifaieBy NVARCHAR(50)
+	@ModifaiedBy NVARCHAR(50)
 AS
 BEGIN
      SET NOCOUNT ON;
 	 SET XACT_ABORT ON;
-	 EXEC sp_set_session_context @key=N'ModifaieBy' ,@value=@ModifaieBy;
+	 EXEC sp_set_session_context @key=N'ModifaiedBy' ,@value=@ModifaiedBy;
 
 	 DECLARE @InsertedContacts TABLE
 	      (
@@ -274,7 +274,7 @@ AS
 BEGIN
 	 INSERT INTO ContactHistory(ContactID,firstname,lastname,email,phone,address,countryid,Operation,ModifaieBy)
 	 SELECT ContactID,firstname,lastname,email,phone,address,countryid,'UPDATED',
-	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaieBy')	AS nvarchar(50)), SYSTEM_USER) 
+	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaiedBy') AS nvarchar(50)), SYSTEM_USER) 
 	 FROM deleted;
 
 END
@@ -282,12 +282,12 @@ GO
 
 CREATE OR ALTER PROCEDURE SP_UpdateBulkContact
 @contactlist DBO.CONTACTTYPE readonly,
-@ModifaieBy nvarchar(50)
+@ModifaiedBy nvarchar(50)
 AS
 BEGIN
     SET NOCOUNT ON;
 	SET XACT_ABORT ON;
-	EXEC sp_set_session_context @key=N'ModifaieBy',@value=@ModifaieBy;
+	EXEC sp_set_session_context @key=N'ModifaiedBy',@value=@ModifaiedBy;
 
 	DECLARE @UpdateContacts DBO.CONTACTTYPE 
     UPDATE Contacts
@@ -312,19 +312,19 @@ AS
 BEGIN
 	 INSERT INTO ContactHistory(ContactID,firstname,lastname,email,phone,address,countryid,Operation,ModifaieBy)
 	 SELECT ContactID,firstname,lastname,email,phone,address,countryid,'DELETED',
-	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaieBy')AS nvarchar(50)), SYSTEM_USER )
+	 ISNULL(CAST(SESSION_CONTEXT(N'ModifaiedBy')AS nvarchar(50)), SYSTEM_USER )
 	 FROM deleted;
 END
 GO
 
 CREATE OR ALTER PROCEDURE sp_DeleteBulkContacts
 @contactlist dbo.contacttype readonly,
-@ModifaieBy nvarchar(50)
+@ModifaiedBy nvarchar(50)
 AS
 BEGIN
      SET XACT_ABORT ON;
      SET NOCOUNT ON;
-     EXEC sp_set_session_context @key = N'ModifaieBy',@value=@ModifaieBy;
+     EXEC sp_set_session_context @key = N'ModifaiedBy',@value=@ModifaiedBy;
 
      DECLARE @DeletedContacts DBO.CONTACTTYPE
      DELETE C
@@ -336,11 +336,12 @@ BEGIN
 	 SELECT * FROM @DeletedContacts;
 END
 GO
-exec sp_GetAllContacts
+
+EXEC sp_GetAllContacts
 GO
 
-select * from ContactHistory
+SELECT * FROM ContactHistory
 go
 
-select * from SystemErrors order by Errorid ASC
+SELECT * FROM SystemErrors ORDER BY Errorid ASC
 go

@@ -89,7 +89,7 @@ namespace ContactManager.BusinessLogic
                 new SqlParameter("@Searchbyletter",(int)Search.EnSearchMode),
                 new SqlParameter("@Contactid",(object)Search.Contactid??DBNull.Value)
             };
-            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_GetAllContacts", parameters);
+            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_GetAllContactsd", parameters);
             return MapdatatableToList(dt);
         }
 
@@ -252,7 +252,7 @@ namespace ContactManager.BusinessLogic
                 new SqlParameter("@ErrorMessage",ex.Message),
                 new SqlParameter("@ErrorStackTrace",(object)ex.StackTrace??DBNull.Value)
             };
-            await clsContactData.ExecuteScalar("sp_LogSystemErrors", parameters);
+            await clsContactData.ExecuteNonQuery("sp_LogSystemErrors", parameters);
         }
     }
 }
