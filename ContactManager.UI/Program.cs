@@ -1,7 +1,12 @@
 ﻿using ContactManager.BusinessLogic;
+//using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Configuration;
+using System.IO;
+using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 
 namespace ContactManager.UI
@@ -15,11 +20,11 @@ namespace ContactManager.UI
             _bll = bll;
         }
 
-        public void PrintAllContacts(List<ClsContactModel> Contactlist)
+        public void PrintAllContacts(IEnumerable<ClsContactModel> Contactlist)
         {
-            if (Contactlist == null || Contactlist.Count == 0)
+            if (Contactlist == null || !Contactlist.Any())
             {
-                Console.WriteLine("not found");
+                Console.WriteLine("No contacts found");
                 Console.WriteLine("============================");
                 return;
             }
@@ -34,7 +39,7 @@ namespace ContactManager.UI
         {
             if (co == null)
             {
-                Console.WriteLine("not found");
+                Console.WriteLine("No contact found");
                 Console.WriteLine("====================================");
                 return;
             }
@@ -49,10 +54,10 @@ namespace ContactManager.UI
 
         private async Task<ClsContactModel> ReadSingleContactInput()
         {
-            Console.WriteLine("please eneter firstname");
+            Console.WriteLine("please enter firstname");
             string firstName = Console.ReadLine();
 
-            Console.WriteLine("please eneter lastname");
+            Console.WriteLine("please enter lastname");
             string lastName = Console.ReadLine();
 
             Console.WriteLine("please enter email");
@@ -67,41 +72,45 @@ namespace ContactManager.UI
             Console.WriteLine("please enter countryid from 1 to 5");
             int input = 0;
             byte count = 3;
-            bool isCountryValid = false;
 
             while (count > 0)
             {
                 if (int.TryParse(Console.ReadLine(), out input))
                 {
-                    try
+                    if (await _bll.CheckCountryID(input))
                     {
-                        if (await _bll.CheckCountryID(input))
-                        {
-                            isCountryValid = true;
-                            break;
-                        }
+                        break;
                     }
-                    catch (SqlException ex)
+                    else
                     {
+                        count--;
+                        if (count == 0)
+                        {
+                            Console.Beep();
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("maximum retries exceeded!");
+                            Console.ResetColor();
+                            return null;
+                        }
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Database Error: {ex.Message}");
+                        Console.WriteLine($"CountryID Is Not Found :-( Please try again with numeric number between 1 to 5 ? you have {count} more tries");
                         Console.ResetColor();
+                        continue;
                     }
                 }
-                if (!isCountryValid)
+                else
                 {
                     count--;
                     if (count == 0)
                     {
                         Console.Beep();
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("maximum retries exceeded, opration canceled");
+                        Console.WriteLine("maximum retries exceeded");
                         Console.ResetColor();
                         return null;
                     }
-                    Console.Beep();
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"wrong input please try again with numaric number between 1 t 5 ? you have {count}  more tries");
+                    Console.WriteLine($"wrong input please try again with numeric number between 1 to 5 ? you have {count}  more tries");
                     Console.ResetColor();
                 }
             }
@@ -115,16 +124,30 @@ namespace ContactManager.UI
                 CountryID = input
             };
         }
-        private int? AddAnotherContact()
+        private int? AnotherContact(string Message)
         {
-            Console.WriteLine("do you want to add another one yes[1] or no[2] or press any number to cancel");
+            byte count = 3;
+            byte Answer = 0;
 
-            if (byte.TryParse(Console.ReadLine(), out byte Answer))
+            Console.WriteLine($"do you want to {Message} another one yes[1] or no[2] or any number to cancel");
+
+            while (!byte.TryParse(Console.ReadLine(), out Answer))
             {
-                if (Answer == 1 || Answer == 2)
+                count--;
+                if (count == 0)
                 {
-                    return Answer;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Maximum Retries Exceeded");
+                    Console.ResetColor();
+                    return null;
                 }
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"invalid input please try again with numeric number, you have {count}  more tries !");
+                Console.ResetColor();
+            }
+            if (Answer == 1 || Answer == 2)
+            {
+                return Answer;
             }
             return null;
         }
@@ -133,6 +156,7 @@ namespace ContactManager.UI
             List<ClsContactModel> list = new List<ClsContactModel>();
             bool IsInputValid = true;
 
+            RecordScreen("Add");
             while (true)
             {
                 ClsContactModel contact = await ReadSingleContactInput();
@@ -145,7 +169,7 @@ namespace ContactManager.UI
 
                 list.Add(contact);
 
-                int? UserChoic = AddAnotherContact();
+                int? UserChoic = AnotherContact("Add");
 
                 if (UserChoic == 1)
                 {
@@ -166,60 +190,89 @@ namespace ContactManager.UI
             {
                 List<ClsContactModel> SuccessfullyAddedList = await _bll.AddBulkContacts(list);
 
-                if (SuccessfullyAddedList != null && SuccessfullyAddedList.Count > 0)
+                if (SuccessfullyAddedList.Any())
                 {
-                    Console.WriteLine($"added successfully \n");
+                    Console.WriteLine($"Added successfully \n");
                     PrintAllContacts(SuccessfullyAddedList);
                 }
 
                 else
                 {
-                    Console.WriteLine("failed to add the contact");
+                    Console.WriteLine("Failed to add the contact");
                 }
             }
 
             else
             {
-                Console.WriteLine("operation caceled due to invalid input");
+                Console.WriteLine("Operation Canceled");
             }
         }
 
-        public int? GetUserInput()
+        public async Task<int?> GetUserInput()
         {
+            //Console.WriteLine("============================");
             Console.WriteLine("Please Enter The Contact ID ");
-            int input;
-            byte count = 2;
-
-            while (!int.TryParse(Console.ReadLine(), out input))
+            int input = 0;
+            byte count = 3;
+            while (count > 0)
             {
-                if (count == 0)
+                if (int.TryParse(Console.ReadLine(), out input))
                 {
-                    Console.Beep();
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("maximum retries exceeded, opration canceled");
-                    Console.ResetColor();
-                    return null;
+                    if (await _bll.CheckContactID(input))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        count--;
+                        if (count == 0)
+                        {
+                            Console.Beep();
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Maximum Retries Exceeded,");
+                            Console.ResetColor();
+                            return null;
+                        }
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"ContactID Is Not Found :-( please try again with numeric number  you have {count} more tries");
+                        Console.ResetColor();
+                        continue;
+                    }
                 }
-                Console.Beep();
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"wrong input please try again with numaric number you have {count}  more tries");
-                Console.ResetColor();
-                count--;
+                else
+                {
+                    count--;
+                    if (count == 0)
+                    {
+                        Console.Beep();
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Maximum Retries Exceeded,");
+                        Console.ResetColor();
+                        return null;
+                    }
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Wrong input please try again with numeric number you have {count}  more tries");
+                    Console.ResetColor();
+                }
             }
             return input;
         }
 
-        public async Task FindContact()
+        public async Task<ClsContactModel> FindContact()
         {
-            int? input = GetUserInput();
+            int? input = await GetUserInput();
+            if (input == null) { Console.WriteLine("Operation Canceled"); return null; }
 
             ClsContactModel contact = await _bll.FindContactByID(input);
             PrintSingleContact(contact);
+            return contact;
         }
 
         public async Task DisplayFirstName()
         {
-            int? input = GetUserInput();
+            int? input = await GetUserInput();
+            if (input == null) { Console.WriteLine("Operation Canceled"); return; }
+
             var Result = await _bll.GetFirstnameById(input);
 
             if (Result.Exists == false)
@@ -238,8 +291,117 @@ namespace ContactManager.UI
                 Console.WriteLine("====================================");
             }
         }
+        private void RecordScreen(string message)
+        {
+            Console.WriteLine($"{message} Record Screen");
+            Console.WriteLine("========================");
+        }
 
+        public async Task UpdateRecord()
+        {
+            ClsContactModel contact, contactupdate;
+            List<ClsContactModel> contactlists = new List<ClsContactModel>();
+            bool IsInputValid = false;
+
+            RecordScreen("Update");
+            while (true)
+            {
+                contact = await FindContact();
+                if (contact == null) { return; }
+
+                contactupdate = await ReadSingleContactInput();
+                if (contactupdate == null) { break; }
+
+                contactupdate.ContactID = contact.ContactID;
+                contactlists.Add(contactupdate);
+
+                int? UserChoice = AnotherContact("Update");
+                if (UserChoice == 1) { continue; }
+                else if (UserChoice == 2) { IsInputValid = true; break; }
+                else { break; }
+            }
+
+            if (IsInputValid && contactlists.Count > 0)
+            {
+                List<ClsContactModel> SuccessfulllyUpdated = await _bll.UpdateBulkContacts(contactlists);
+
+                if (SuccessfulllyUpdated.Any())
+                {
+                    Console.WriteLine("Record Updated Successfully");
+                    Console.WriteLine("========================");
+                    PrintAllContacts(SuccessfulllyUpdated);
+                }
+                else
+                {
+                    Console.WriteLine("Failed To Update the Contact");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Operation canceled ");
+            }
+        }
+
+        public async Task DeleteContacts()
+        {
+            List<ClsContactModel> contactlist = new List<ClsContactModel>();
+            ClsContactModel contact;
+            bool IsInputValid = false;
+
+            RecordScreen("Delet");
+            while (true)
+            {
+                contact = await FindContact();
+                if (contact == null) { return; }
+
+                contactlist.Add(contact);
+
+                int? CheckInput = AnotherContact("delete");
+                if (CheckInput == 1) { continue; }
+
+                else if (CheckInput == 2) { IsInputValid = true; break; }
+
+                else { break; }
+            }
+
+            if (IsInputValid && contactlist.Count > 0)
+            {
+                List<ClsContactModel> SuccessfullyDeleted = await _bll.DeleteBulkContacts(contactlist);
+
+                if (SuccessfullyDeleted.Any())
+                {
+                    Console.WriteLine("\nRecord Deleted Successfully");
+                    Console.WriteLine("===========================");
+                    PrintAllContacts(SuccessfullyDeleted);
+                }
+                else
+                {
+                    Console.WriteLine("Failed To Delete The Contacts");
+                }
+            }
+            else
+            {
+                Console.Beep();
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.WriteLine("Operation Canceld");
+                Console.ResetColor();
+            }
+        }
+
+        public static async Task LogErrorSafely(Exception ex, string UserMessage)
+        {
+            try
+            {
+                await clsContactBusiness.Errors(ex);
+            }
+            catch (Exception logex)
+            {
+                File.AppendAllText("Emergency_Error_log.txt", $"\n{DateTime.Now}: {ex.Message} | LogError{logex.Message}");
+            }
+            Console.WriteLine(UserMessage);
+        }
     }
+
     internal class Program
     {
         static async Task Main(string[] args)
@@ -254,44 +416,57 @@ namespace ContactManager.UI
                 list = await contact.GetAllContacts(new ClsContactSearchFilter { });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsByContactId [1]\n");
+                Console.WriteLine("\nGetAllContactsByContactId [1]\n");
                 list = await contact.GetAllContacts(new ClsContactSearchFilter { Contactid = 1 });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsByFirstName [jane]\n");
+                Console.WriteLine("\nGetAllContactsByFirstName [jane]\n");
                 list = await contact.GetAllContacts(new ClsContactSearchFilter { Firstname = "jane" });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsByCoutryId [5]\n");
+                Console.WriteLine("\nGetAllContactsByCoutnryId [5]\n");
                 list = await contact.GetAllContacts(new ClsContactSearchFilter { Countryid = 5 });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsStarstWith [e]");
+                Console.WriteLine("\nGetAllContactsStartstWith [a]");
                 list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "e", EnSearchMode = EnLetter.Firstletter });
+                    (new ClsContactSearchFilter { Firstname = "a", EnSearchMode = EnLetter.Firstletter });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsEndsWith [x]\n");
+                Console.WriteLine("\nGetAllContactsEndsWith [d]\n");
                 list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "x", EnSearchMode = EnLetter.Lastletter });
+                    (new ClsContactSearchFilter { Firstname = "d", EnSearchMode = EnLetter.Lastletter });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetAllContactsContainsWith[z]\n");
+                Console.WriteLine("\nGetAllContactsContains[o]\n");
                 list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "z", EnSearchMode = EnLetter.Anywhere });
+                    (new ClsContactSearchFilter { Firstname = "o", EnSearchMode = EnLetter.Anywhere });
                 ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("GetFirstnameById\n");
+                Console.WriteLine("\nGetFirstnameById\n");
                 await ConsolUI.DisplayFirstName();
 
-                Console.WriteLine("FindContactByID\n");
-
+                Console.WriteLine("\nFindContactByID\n");
                 await ConsolUI.FindContact();
 
-                Console.WriteLine("AddBulkContacts\n");
+                Console.WriteLine("\nAdd Bulk Contacts\n");
                 await ConsolUI.AddData();
+
+                Console.WriteLine("\nUpdate Bulk Contacts\n");
+                await ConsolUI.UpdateRecord();
+
+                Console.WriteLine("\nDelete Bulk Contacts\n");
+                await ConsolUI.DeleteContacts();
+
             }
-            catch (Exception ex) { Console.WriteLine(ex.Message); }
+            catch (SqlException sqex)
+            {
+                await ClsContactConsolUI.LogErrorSafely(sqex, "Sorry, An Unexpected DataBase Error Occurred Please Try Again Later");
+            }
+            catch (Exception ex)
+            {
+                await ClsContactConsolUI.LogErrorSafely(ex, "Sorry, An Unexpected Application Error Occurred. Please Try Again Later.");
+            }
         }
     }
 }

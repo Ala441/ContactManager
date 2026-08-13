@@ -2,7 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+//using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 
 namespace ContactManager.BusinessLogic
@@ -126,15 +127,22 @@ namespace ContactManager.BusinessLogic
             return null;
         }
 
-        public async Task<List<ClsContactModel>> AddBulkContacts(List<ClsContactModel> ContactList)
+        private DataTable CreateContactDataTable(bool IncludeContactId = false)
         {
             DataTable DtContacts = new DataTable();
+            if (IncludeContactId) DtContacts.Columns.Add("ContactID", typeof(int));
             DtContacts.Columns.Add("Firstname", typeof(string));
             DtContacts.Columns.Add("Lastname", typeof(string));
             DtContacts.Columns.Add("Email", typeof(string));
             DtContacts.Columns.Add("Phone", typeof(string));
             DtContacts.Columns.Add("Address", typeof(string));
             DtContacts.Columns.Add("Countryid", typeof(int));
+            return DtContacts;
+        }
+
+        public async Task<List<ClsContactModel>> AddBulkContacts(List<ClsContactModel> ContactList)
+        {
+            DataTable DtContacts = CreateContactDataTable();
 
             foreach (ClsContactModel Contact in ContactList)
             {
@@ -153,10 +161,80 @@ namespace ContactManager.BusinessLogic
                 {
                     TypeName="dbo.contacttabletype",
                     Value=DtContacts
-                }
+                },
+                new SqlParameter("@ModifaieBy",Environment.UserName)
             };
             DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_insertbulkcontacts", parameters);
             return MapdatatableToList(dt);
+        }
+
+        public async Task<List<ClsContactModel>> UpdateBulkContacts(List<ClsContactModel> contactlist)
+        {
+            DataTable DtContacts = CreateContactDataTable(true);
+
+            foreach (ClsContactModel co in contactlist)
+            {
+                DtContacts.Rows.Add(
+                    co.ContactID.HasValue ? (object)co.ContactID : DBNull.Value,
+                    string.IsNullOrEmpty(co.FirstName) ? DBNull.Value : (object)co.FirstName,
+                    string.IsNullOrEmpty(co.LastName) ? DBNull.Value : (object)co.LastName,
+                    string.IsNullOrEmpty(co.Email) ? DBNull.Value : (object)co.Email,
+                    string.IsNullOrEmpty(co.Phone) ? DBNull.Value : (object)co.Phone,
+                    string.IsNullOrEmpty(co.Address) ? DBNull.Value : (object)co.Address,
+                    co.CountryID.HasValue ? (object)co.CountryID : DBNull.Value);
+            }
+            SqlParameter[] parameters =
+            {
+                new SqlParameter("@contactlist",SqlDbType.Structured)
+                {
+                    TypeName="dbo.contacttype",
+                    Value=DtContacts
+                },
+                new SqlParameter("@ModifaieBy",Environment.UserName)
+            };
+            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_UpdateBulkContact", parameters);
+
+            return MapdatatableToList(dt);
+        }
+
+        public async Task<List<ClsContactModel>> DeleteBulkContacts(List<ClsContactModel> contactlist)
+        {
+            DataTable DtContacts = CreateContactDataTable(true);
+
+            foreach (ClsContactModel contact in contactlist)
+            {
+                DtContacts.Rows.Add(
+                    contact.ContactID.HasValue ? (object)contact.ContactID : DBNull.Value,
+                    string.IsNullOrEmpty(contact.FirstName) ? DBNull.Value : (object)contact.FirstName,
+                    string.IsNullOrEmpty(contact.LastName) ? DBNull.Value : (object)contact.LastName,
+                    string.IsNullOrEmpty(contact.Email) ? DBNull.Value : (object)contact.Email,
+                    string.IsNullOrEmpty(contact.Phone) ? DBNull.Value : (object)contact.Phone,
+                    string.IsNullOrEmpty(contact.Address) ? DBNull.Value : (object)contact.Address,
+                    contact.CountryID.HasValue ? (object)contact.CountryID : DBNull.Value
+                    );
+            }
+            SqlParameter[] parameters =
+            {
+                new SqlParameter("@contactlist",SqlDbType.Structured)
+                {
+                    TypeName="dbo.contacttype",
+                    Value=DtContacts
+                },
+                new SqlParameter("@ModifaieBy",Environment.UserName)
+            };
+            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_deletebulkcontacts", parameters);
+
+            return MapdatatableToList(dt);
+        }
+
+        public async Task<bool> CheckContactID(int ContactID)
+        {
+            SqlParameter[] parameters =
+            {
+                new SqlParameter("@ContactID",(object)ContactID)
+            };
+            object Result = await clsContactData.ExecuteScalar("sp_CheckContactID", parameters);
+            return Result != null && Convert.ToInt32(Result) > 0;
         }
 
         public async Task<bool> CheckCountryID(int CountryID)
@@ -165,6 +243,16 @@ namespace ContactManager.BusinessLogic
             SqlParameter[] parameter = { new SqlParameter("@Countryid", (object)CountryID) };
             Result = await clsContactData.ExecuteScalar("sp_checkcountryexists", parameter);
             return Result != null && Convert.ToInt32(Result) > 0;
+        }
+
+        public static async Task Errors(Exception ex)
+        {
+            SqlParameter[] parameters =
+            {
+                new SqlParameter("@ErrorMessage",ex.Message),
+                new SqlParameter("@ErrorStackTrace",(object)ex.StackTrace??DBNull.Value)
+            };
+            await clsContactData.ExecuteScalar("sp_LogSystemErrors", parameters);
         }
     }
 }
