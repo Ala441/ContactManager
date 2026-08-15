@@ -342,7 +342,7 @@ namespace ContactManager.UI
 
         public async Task DeleteContacts()
         {
-            List<ClsContactModel> contactlist = new List<ClsContactModel>();
+            List<int> contactlist = new List<int>();
             ClsContactModel contact;
             bool IsInputValid = false;
 
@@ -352,7 +352,7 @@ namespace ContactManager.UI
                 contact = await FindContact();
                 if (contact == null) { return; }
 
-                contactlist.Add(contact);
+                contactlist.Add(contact.ContactID.Value);
 
                 int? CheckInput = AnotherContact("delete");
                 if (CheckInput == 1) { continue; }
@@ -394,7 +394,12 @@ namespace ContactManager.UI
             }
             catch (Exception logex)
             {
-                File.AppendAllText("Emergency_Error_log.txt", $"\n{DateTime.Now}: {ex.Message} | LogError{logex.Message}");
+                string LogFilePath = "Emergency_Error_log.txt";
+                File.AppendAllText(LogFilePath, $"\n{DateTime.Now}: {ex.Message} | LogError{logex.Message}");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(LogFilePath)
+                {
+                    UseShellExecute = true
+                });
             }
             Console.WriteLine(UserMessage);
         }
@@ -410,42 +415,42 @@ namespace ContactManager.UI
                 ClsContactConsolUI ConsolUI = new ClsContactConsolUI(contact);
                 List<ClsContactModel> list = new List<ClsContactModel>();
 
-                Console.WriteLine("GetAllContacts\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("GetAllContacts\n");
+                //list = await contact.GetAllContacts(new ClsContactSearchFilter { });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsByContactId [1]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Contactid = 1 });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsByContactId [1]\n");
+                //list = await contact.GetAllContacts(new ClsContactSearchFilter { Contactid = 1 });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsByFirstName [jane]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Firstname = "jane" });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsByFirstName [jane]\n");
+                //list = await contact.GetAllContacts(new ClsContactSearchFilter { Firstname = "jane" });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsByCoutnryId [5]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Countryid = 5 });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsByCoutnryId [5]\n");
+                //list = await contact.GetAllContacts(new ClsContactSearchFilter { Countryid = 5 });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsStartstWith [a]");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "a", EnSearchMode = EnLetter.Firstletter });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsStartstWith [a]");
+                //list = await contact.GetAllContacts
+                //    (new ClsContactSearchFilter { Firstname = "a", EnSearchMode = EnLetter.Firstletter });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsEndsWith [d]\n");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "d", EnSearchMode = EnLetter.Lastletter });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsEndsWith [d]\n");
+                //list = await contact.GetAllContacts
+                //    (new ClsContactSearchFilter { Firstname = "d", EnSearchMode = EnLetter.Lastletter });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetAllContactsContains[o]\n");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "o", EnSearchMode = EnLetter.Anywhere });
-                ConsolUI.PrintAllContacts(list);
+                //Console.WriteLine("\nGetAllContactsContains[o]\n");
+                //list = await contact.GetAllContacts
+                //    (new ClsContactSearchFilter { Firstname = "o", EnSearchMode = EnLetter.Anywhere });
+                //ConsolUI.PrintAllContacts(list);
 
-                Console.WriteLine("\nGetFirstnameById\n");
-                await ConsolUI.DisplayFirstName();
+                //Console.WriteLine("\nGetFirstnameById\n");
+                //await ConsolUI.DisplayFirstName();
 
-                Console.WriteLine("\nFindContactByID\n");
-                await ConsolUI.FindContact();
+                //Console.WriteLine("\nFindContactByID\n");
+                //await ConsolUI.FindContact();
 
                 Console.WriteLine("\nAdd Bulk Contacts\n");
                 await ConsolUI.AddData();

@@ -306,6 +306,15 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS(SELECT * FROM SYS.types WHERE NAME ='dbo.Deletetype' AND is_table_type=1)
+BEGIN
+CREATE TYPE dbo.Deletetype AS TABLE
+(
+ ContactID INT 
+)
+END
+GO
+
 CREATE OR ALTER TRIGGER trg_AfterDeleteContact ON Contacts
 After Delete
 AS
@@ -318,7 +327,7 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE sp_DeleteBulkContacts
-@contactlist dbo.contacttype readonly,
+@contactlist dbo.Deletetype readonly,
 @ModifaiedBy nvarchar(50)
 AS
 BEGIN
@@ -326,7 +335,16 @@ BEGIN
      SET NOCOUNT ON;
      EXEC sp_set_session_context @key = N'ModifaiedBy',@value=@ModifaiedBy;
 
-     DECLARE @DeletedContacts DBO.CONTACTTYPE
+     DECLARE @DELETEDCONTACTS  TABLE
+	 (
+	  ContactID int,
+      firstname nvarchar(10),
+      lastname nvarchar(20),
+      email nvarchar(30),
+      phone nvarchar(15),
+      address nvarchar(50),
+      countryid int
+	 )
      DELETE C
 	 OUTPUT deleted.* into @DeletedContacts
 	 FROM Contacts C
