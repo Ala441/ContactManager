@@ -3,6 +3,7 @@
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,51 @@ namespace ContactManager.UI
         public ClsContactConsolUI(clsContactBusiness bll)
         {
             _bll = bll;
+        }
+
+        private bool _IsListEmpty(List<ClsContactModel> list) => list == null || !list.Any();
+        private bool _IsLastPage(List<ClsContactModel> list, int pagesize) => list.Count < pagesize;
+        private void _PrintDivider() => Console.WriteLine("=====================");
+        private void _PrintResult(string meesage)
+        {
+            _PrintDivider();
+            Console.WriteLine(meesage);
+            _PrintDivider();
+        }
+        private bool _ShouldContinuePagination()
+        {
+            Console.WriteLine("\nPress [Enter] to load the next page, or type 'exit' or any key > enter to stop.");
+            string input = Console.ReadLine();
+            return string.IsNullOrWhiteSpace(input);
+        }
+
+        public async Task RunSearchWithPagination(ClsContactSearchFilter filter)
+        {
+            while (true)
+            {
+                List<ClsContactModel> list = await _bll.GetAllContacts(filter);
+
+                if (_IsListEmpty(list))
+                {
+                    _PrintResult("No Records Found.");
+                    break;
+                }
+
+                PrintAllContacts(list);
+                filter.LastContactID = list.Last().ContactID.Value;
+
+                if (_IsLastPage(list, filter.PageSize))
+                {
+                    _PrintResult("No More Records");
+                    break;
+                }
+
+                if (!_ShouldContinuePagination())
+                {
+                    break;
+                }
+
+            }
         }
 
         public void PrintAllContacts(IEnumerable<ClsContactModel> Contactlist)
@@ -418,35 +464,28 @@ namespace ContactManager.UI
                 List<ClsContactModel> list = new List<ClsContactModel>();
 
                 Console.WriteLine("GetAllContacts\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter { });
 
                 Console.WriteLine("\nGetAllContactsByContactId [1]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Contactid = 1 });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter { Contactid = 1 });
 
                 Console.WriteLine("\nGetAllContactsByFirstName [jane]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Firstname = "jane" });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter { Firstname = "jane" });
 
                 Console.WriteLine("\nGetAllContactsByCoutnryId [5]\n");
-                list = await contact.GetAllContacts(new ClsContactSearchFilter { Countryid = 5 });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter { Countryid = 5 });
 
                 Console.WriteLine("\nGetAllContactsStartstWith [a]");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "a", EnSearchMode = EnLetter.Firstletter });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter 
+                { Firstname = "a", EnSearchMode = EnLetter.Firstletter });
 
                 Console.WriteLine("\nGetAllContactsEndsWith [d]\n");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "d", EnSearchMode = EnLetter.Lastletter });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter
+                { Firstname = "e", EnSearchMode = EnLetter.Lastletter });
 
                 Console.WriteLine("\nGetAllContactsContains[o]\n");
-                list = await contact.GetAllContacts
-                    (new ClsContactSearchFilter { Firstname = "o", EnSearchMode = EnLetter.Anywhere });
-                ConsolUI.PrintAllContacts(list);
+                await ConsolUI.RunSearchWithPagination(new ClsContactSearchFilter
+                { Firstname = "o", EnSearchMode = EnLetter.Anywhere });
 
                 Console.WriteLine("\nGetFirstnameById\n");
                 await ConsolUI.DisplayFirstName();

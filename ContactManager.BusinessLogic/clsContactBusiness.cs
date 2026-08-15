@@ -41,6 +41,9 @@ namespace ContactManager.BusinessLogic
         public bool? NullInput { get; set; } = false;
         public EnLetter EnSearchMode { get; set; } = EnLetter.None;
         public int? Contactid { get; set; }
+
+        public int LastContactID = 0;
+        public int PageSize = 50;
     }
 
     public class clsFetchResult<T>
@@ -88,9 +91,12 @@ namespace ContactManager.BusinessLogic
                 new SqlParameter("@Countryid",(object) Search.Countryid ?? DBNull.Value),
                 new SqlParameter("@Searchonlynull",Search.NullInput),
                 new SqlParameter("@Searchbyletter",(int)Search.EnSearchMode),
-                new SqlParameter("@Contactid",(object)Search.Contactid??DBNull.Value)
+                new SqlParameter("@Contactid",(object)Search.Contactid??DBNull.Value),
+
+                new SqlParameter("@Pagesize",Search.PageSize),
+                new SqlParameter("@LastID",Search.LastContactID)
             };
-            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_GetAllContactsd", parameters);
+            DataTable dt = await clsContactData.ExecuteStoredProcedure("sp_GetAllContacts", parameters);
             return MapdatatableToList(dt);
         }
 

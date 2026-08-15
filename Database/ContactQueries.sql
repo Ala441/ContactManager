@@ -84,12 +84,14 @@ CREATE OR ALTER PROCEDURE sp_GetAllContacts
     @countryid INT = NULL,
     @searchonlynull BIT = 0,
     @searchbyletter INT = 0,
-    @ContactId INT = NULL
+    @ContactId INT = NULL,
+	@LastID int = 0,
+	@PageSize int = 20
 AS 
 BEGIN 
     DECLARE @sql NVARCHAR(MAX);
 
-    SET @sql = N'SELECT ContactID, FirstName, LastName, Email, Phone, Address, CountryID FROM Contacts WHERE 1=1';
+    SET @sql = N'SELECT TOP (@Psize) ContactID, FirstName, LastName, Email, Phone, Address, CountryID FROM Contacts WHERE ContactID > @Lstid';
 
     IF @searchonlynull = 1
         SET @sql += N' AND (FirstName IS NULL OR CountryID IS NULL)';
@@ -109,14 +111,16 @@ BEGIN
         SET @sql += N' AND ContactID = @ConID';
 
     IF @countryid IS NOT NULL
-        SET @sql += N' AND CountryID = @CouID';
+        SET @sql += N' AND CountryID = @CounID';
 
     EXEC sp_executesql
         @stmt = @sql,
-        @params = N'@FN NVARCHAR(10), @CouID INT, @ConID INT',
+        @params = N'@FN NVARCHAR(10), @CounID INT, @ConID INT, @Psize INT, @Lstid int',
         @FN = @firstname,
-        @CouID = @countryid,
-        @ConID = @ContactId;
+        @CounID = @countryid,
+        @ConID = @ContactId,
+		@Psize = @Pagesize,
+		@LstID = @LastID
 END
 GO 
 
